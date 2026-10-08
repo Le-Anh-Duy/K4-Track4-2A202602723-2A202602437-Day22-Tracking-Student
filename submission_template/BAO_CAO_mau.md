@@ -16,6 +16,8 @@ Mỗi video: tracker bạn nộp, `conf`, `iou`, điều bạn **nhìn thấy** 
 | video_4 (trong nhà, camera di chuyển) | deepocsort | 0.3 | 0.5 | Sàn bóng và lan can kính phản chiếu người nhưng không bị nhận là người ở conf 0.3. Người trong hành lang, kể cả người bị che một phần, đều có hộp. | `deepocsort` conf 0.5: bỏ người bị che một phần (hộp thật chỉ 0.37 điểm), track đứt nhiều hơn. `ocsort` 0.3: 30 ID so với 26. `strongsort`: track đứt nhiều nhất. |
 | video_5 (trên xe bus, giao lộ đông) | botsort | 0.15 | 0.5 | Người đi bộ rất nhỏ ở xa; chỉ người gần vỉa hè có hộp (4.4 hộp/frame). Không thấy hộp trên xe, cột đèn, biển báo. Conf thấp bắt thêm người nhỏ mà số ID gần như không đổi. | `botsort` conf 0.3: ít hộp hơn ~10 %. `strongsort` 0.3: 54 ID / 300 frame, đứt nhiều nhất. `bytetrack` 0.3: mất ~1/3 số hộp. |
 
+Số liệu của mọi lần chạy thử (36 lần: 5 tracker × các mức `conf` / `iou`) nằm trong `runs/khaosat/tong_hop.csv`, file kết quả từng lần trong `runs/khaosat/<video>/`. Video 2–5 thử trên 300 frame đầu; bản nộp ở `runs/nop_bai/` chạy đủ frame.
+
 ## 2. Số liệu video_1
 
 Dán bảng HOTA / MOTA / IDF1 do `scripts/evaluate_practice.py` in ra.
