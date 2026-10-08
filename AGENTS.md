@@ -6,9 +6,10 @@ Human docs (`README.md`, `HUONG_DAN.md`, the report template) stay in Vietnamese
 
 ## Layout
 
-- `scripts/` — `check_data.py`, `run_tracking.py`, `evaluate_practice.py`. Run them from the repo root.
-- `tests/` — unit tests. No GPU, no lab images, no network. `pytest.ini` sets `pythonpath = scripts`.
+- `scripts/` — `check_data.py`, `run_tracking.py`, `evaluate_practice.py`, `check_submission.py`. Run them from the repo root.
+- `tests/` — unit tests. No GPU, no lab images, no network. `pytest.ini` sets `pythonpath = scripts` and `testpaths = tests` (TrackEval is cloned into the repo root).
 - `on_tap_metrics.ipynb` — metric quiz, then one YOLO frame when `LAB_DATA` is set.
+- `colab_lab.ipynb` — whole lab on Colab. Installs `boxmot` with `--no-deps` (its `numpy==1.23.1` pin has no wheel for Colab's Python) and patches its `float(array)` calls for NumPy >= 2.4.
 - `submission_template/` — report the group fills in.
 
 ## Rules

@@ -59,4 +59,14 @@ python scripts/evaluate_practice.py \
 - `video_1.txt` … `video_5.txt` trong `runs/nop_bai/` (đủ frame, đúng tên).
 - `submission_template/BAO_CAO_mau.md` đã điền. Số HOTA / MOTA / IDF1 chỉ bắt buộc cho `video_1`.
 
+Kiểm tra đủ 5 file trước khi nộp:
+
+```bash
+python scripts/check_submission.py --lab-data-root "$LAB_DATA" --submission-dir runs/nop_bai
+```
+
+## Chạy trên Colab
+
+Máy không có GPU thì mở [`colab_lab.ipynb`](colab_lab.ipynb) trên Colab (`Runtime → T4 GPU`). Notebook tự clone repo và TrackEval, cài thư viện, tải dữ liệu, rồi đi đủ các bước trên: so tracker trên `video_1` bằng số, xem `video_2`–`video_5` cạnh nhau, chạy bản nộp và nén kết quả để tải về.
+
 Chi tiết từng bước, sự cố, và lịch 2 giờ: [HUONG_DAN.md](HUONG_DAN.md).

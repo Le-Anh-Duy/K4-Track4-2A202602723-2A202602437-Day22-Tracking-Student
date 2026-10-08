@@ -91,6 +91,46 @@ def stage(trackeval_root: Path, lab_data_root: Path, submission: Path, run_name:
     shutil.copy(submission, sub_dst / f"{PRACTICE_VIDEO}.txt")
 
 
+def trackeval_command(trackeval_root: Path, run_name: str, benchmark: str, split: str) -> list[str]:
+    """Dựng lệnh gọi script chấm của TrackEval trong một process con đã vá NumPy.
+
+    TrackEval chạy ở process riêng nên bản vá ``np.float`` / ``np.int`` của
+    process hiện tại không có tác dụng. Lệnh này vá lại ngay trong process con
+    rồi mới chạy ``run_mot_challenge.py``.
+
+    Args:
+        trackeval_root: Thư mục gốc bản clone TrackEval.
+        run_name: Tên lần chấm đã stage.
+        benchmark: Tên benchmark TrackEval.
+        split: Nhánh dữ liệu, thường là ``train``.
+
+    Returns:
+        Danh sách tham số cho ``subprocess.run``.
+    """
+    launcher = (
+        "import runpy, sys; "
+        f"sys.path.insert(0, {str(Path(__file__).resolve().parent)!r}); "
+        "from evaluate_practice import _patch_numpy_aliases; "
+        "_patch_numpy_aliases(); "
+        "sys.argv = sys.argv[1:]; "
+        "runpy.run_path(sys.argv[0], run_name='__main__')"
+    )
+    return [
+        sys.executable,
+        "-c",
+        launcher,
+        str(trackeval_root / "scripts" / "run_mot_challenge.py"),
+        "--GT_FOLDER", str(trackeval_root / "data" / "gt" / "mot_challenge"),
+        "--TRACKERS_FOLDER", str(trackeval_root / "data" / "trackers" / "mot_challenge"),
+        "--BENCHMARK", benchmark,
+        "--SPLIT_TO_EVAL", split,
+        "--SEQ_INFO", PRACTICE_VIDEO,
+        "--TRACKERS_TO_EVAL", run_name,
+        "--METRICS", "HOTA", "CLEAR", "Identity",
+        "--USE_PARALLEL", "False",
+    ]
+
+
 def run_trackeval(trackeval_root: Path, run_name: str, benchmark: str, split: str) -> None:
     """Gọi script chấm của TrackEval, chỉ một video luyện.
 
@@ -103,20 +143,45 @@ def run_trackeval(trackeval_root: Path, run_name: str, benchmark: str, split: st
     Raises:
         subprocess.CalledProcessError: Khi TrackEval thoát với mã khác 0.
     """
-    cmd = [
-        sys.executable,
-        str(trackeval_root / "scripts" / "run_mot_challenge.py"),
-        "--GT_FOLDER", str(trackeval_root / "data" / "gt" / "mot_challenge"),
-        "--TRACKERS_FOLDER", str(trackeval_root / "data" / "trackers" / "mot_challenge"),
-        "--BENCHMARK", benchmark,
-        "--SPLIT_TO_EVAL", split,
-        "--SEQ_INFO", PRACTICE_VIDEO,
-        "--TRACKERS_TO_EVAL", run_name,
-        "--METRICS", "HOTA", "CLEAR", "Identity",
-        "--USE_PARALLEL", "False",
-    ]
-    print("Đang chấm video luyện:\n  " + " ".join(cmd) + "\n")
+    cmd = trackeval_command(trackeval_root, run_name, benchmark, split)
+    print(f"Đang chấm video luyện bằng {cmd[3]} (run {run_name})\n", flush=True)
     subprocess.run(cmd, check=True)
+
+
+def summary_path(trackeval_root: Path, run_name: str, benchmark: str, split: str) -> Path:
+    """Trả về đường dẫn file tóm tắt TrackEval ghi ra sau khi chấm.
+
+    Args:
+        trackeval_root: Thư mục gốc bản clone TrackEval.
+        run_name: Tên lần chấm.
+        benchmark: Tên benchmark TrackEval.
+        split: Nhánh dữ liệu, thường là ``train``.
+
+    Returns:
+        Đường dẫn ``pedestrian_summary.txt`` của lần chấm đó.
+    """
+    return (
+        trackeval_root / "data" / "trackers" / "mot_challenge"
+        / f"{benchmark}-{split}" / run_name / "pedestrian_summary.txt"
+    )
+
+
+def parse_summary(text: str) -> dict[str, float]:
+    """Đọc nội dung file ``pedestrian_summary.txt`` của TrackEval.
+
+    Args:
+        text: Dòng đầu là tên cột, dòng sau là giá trị, cách nhau bởi dấu cách.
+
+    Returns:
+        Dict tên cột -> giá trị. HOTA, MOTA, IDF1 tính theo phần trăm.
+
+    Raises:
+        ValueError: Khi thiếu dòng giá trị hoặc số cột hai dòng không khớp.
+    """
+    lines = [line.split() for line in text.strip().splitlines() if line.strip()]
+    if len(lines) < 2 or len(lines[0]) != len(lines[1]):
+        raise ValueError("File tóm tắt TrackEval phải có một dòng tên cột và một dòng giá trị cùng số cột")
+    return {name: float(value) for name, value in zip(lines[0], lines[1])}
 
 
 def main() -> None:
@@ -144,6 +209,11 @@ def main() -> None:
     split = config.get("split", "train")
     stage(args.trackeval_root, args.lab_data_root, args.submission, args.run_name, benchmark)
     run_trackeval(args.trackeval_root, args.run_name, benchmark, split)
+    summary = parse_summary(summary_path(args.trackeval_root, args.run_name, benchmark, split).read_text())
+    print(
+        f"\n[{args.run_name}] HOTA={summary['HOTA']:.2f}  MOTA={summary['MOTA']:.2f}  "
+        f"IDF1={summary['IDF1']:.2f}  IDSW={int(summary['IDSW'])}"
+    )
     print(
         "\nĐọc bảng phía trên: HOTA cân bằng phát hiện và giữ danh tính; "
         "MOTA phạt số lần đổi ID; IDF1 nhạy với track dài bị gán sai ID. "
